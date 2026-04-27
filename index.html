@@ -169,7 +169,7 @@
       "name": "Is my child's data safe with MyCareerLens?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Yes. MyCareerLens has no account, no server backend, and no database. Your child's answers stay in your browser on your device. If you clear browser data, everything is gone — there's no copy stored anywhere else. Nothing is sold, shared, or seen by anyone."
+        "text": "Yes. MyCareerLens has no account, no server backend, and no database. Your child's answers stay in your browser on your device. If you clear browser data, everything is gone — there's no copy stored anywhere else. Nothing personal is sold, shared, or seen by anyone. The only thing tracked is two anonymous numbers — total visits and total completions — aggregate counts visible to everyone with no user information attached."
       }
     },
     {
@@ -2893,7 +2893,7 @@ code, kbd, pre, samp, .font-data { font-family: var(--font-data); }
     <p>Salary ranges in MyCareerLens are indicative — drawn from public sources (Glassdoor India, AmbitionBox, NaukriHub, government wage data) at the time of build. Actual salaries vary widely by city tier, employer, sector, and individual experience. Use the ranges to understand relative scale (is this a high-pay or modest-pay path?), not as exact predictions.</p>
 
     <h3 style="color:#0D7377;margin-top:1.5rem;">Is my child's data safe?</h3>
-    <p>Yes. MyCareerLens has no account, no server backend, and no database. Your child's answers stay in your browser on your device. If you clear browser data, everything is gone — there's no copy stored anywhere else. Nothing is sold, shared, or seen by anyone. This is deliberate and cannot be changed without fundamentally breaking the tool's privacy-first design.</p>
+    <p>Yes. MyCareerLens has no account, no server backend, and no database. Your child's answers stay in your browser on your device. If you clear browser data, everything is gone — there's no copy stored anywhere else. Nothing personal is sold, shared, or seen by anyone. The only thing tracked is two anonymous numbers — total visits and total completions — which are aggregate counts visible to everyone with no user information attached.</p>
 
     <h3 style="color:#0D7377;margin-top:1.5rem;">My child is young — is the result still meaningful?</h3>
     <p>For young children (ages 6-9), MyCareerLens uses simpler questions, but some abstract concepts are still genuinely hard. The results are best understood as a gentle introduction to thinking about interests — not a definitive profile. Revisit annually as your child matures. Age-appropriate doesn't mean age-perfect, and a child's self-understanding grows alongside them.</p>
@@ -3012,6 +3012,10 @@ code, kbd, pre, samp, .font-data { font-family: var(--font-data); }
         <h1>MyCareerLens</h1>
         <p class="hero-tag">Discover Your Career Direction</p>
         <p class="hero-sub">A free, research-backed career exploration tool for Indian students aged 6–21. Honest, warm, and designed to travel with you wherever you go.</p>
+        <!-- v4.1.9: Anonymous global counter display (visits + completions). Hidden by default;
+             populated asynchronously via JS only if Abacus API responds AND visibility flags
+             (SHOW_VISIT_COUNTER / SHOW_COMPLETION_COUNTER) are true. Silently invisible otherwise. -->
+        <p id="landingCounters" class="hero-counters" style="display:none;text-align:center;font-size:0.9rem;color:var(--c-text-muted, #6b7280);margin-top:0.5rem;margin-bottom:0.5rem;" aria-live="polite"></p>
         <div class="cta-area">
           <button class="btn btn-primary btn-large btn-pulse" id="ctaStart">Start Your Assessment →</button>
           <a href="#" class="cta-secondary hidden" id="ctaHistory">View Previous Results</a>
@@ -3182,7 +3186,7 @@ code, kbd, pre, samp, .font-data { font-family: var(--font-data); }
     <div class="container">
       <p><strong>MyCareerLens</strong> is a research-informed career exploration tool. It is not a clinical diagnostic and should not replace professional counseling for major academic decisions.</p>
       <p>Built on Gardner's Multiple Intelligences, Holland's RIASEC, Big Five Personality (OCEAN), VARK Learning Styles, and Goleman's Emotional Intelligence.</p>
-      <p>MyCareerLens respects your privacy fully. Your responses and results never leave your device. On first load, public fonts and chart libraries are fetched from CDN — no personal data is transmitted. After that, the app works offline. There are no ads, no tracking, no accounts, no data collection.</p>
+      <p>MyCareerLens respects your privacy fully. Your responses and results never leave your device. On first load, public fonts and chart libraries are fetched from CDN — no personal data is transmitted. After that, the app works offline. There are no ads, no accounts, and no personal data collection. The only thing recorded is anonymous global visit and completion counts — two simple numbers visible to everyone, with no user information attached.</p>
       <p>Free forever. No premium. No upsell. Credits: Google Fonts, OpenDyslexic.</p>
       <div class="footer-links">
         <button type="button" class="footer-link" id="aboutLink">About MyCareerLens</button>
@@ -3205,7 +3209,7 @@ code, kbd, pre, samp, .font-data { font-family: var(--font-data); }
    ============================================================ */
 
 /** @const {string} Application version (phase-aware) */
-const APP_VERSION = "4.1.8-final";
+const APP_VERSION = "4.1.9-final";
 
 /** @const {number} Session schema version. Increment when session shape changes incompatibly. */
 const SESSION_VERSION = 1;
@@ -13335,7 +13339,7 @@ function renderParentGuideTab(session) {
           <details class="parent-faq-item">
             <summary>Is my child's data safe?</summary>
             <div class="parent-faq-answer">
-              Yes. MyCareerLens has <strong>no account, no server backend, and no database</strong>. Your child's answers stay in your browser on your device. If you clear browser data, everything is gone — there's no copy stored anywhere else. Nothing is sold, shared, or seen by anyone. This is deliberate and cannot be changed without fundamentally breaking the tool's privacy-first design.
+              Yes. MyCareerLens has <strong>no account, no server backend, and no database</strong>. Your child's answers stay in your browser on your device. If you clear browser data, everything is gone — there's no copy stored anywhere else. Nothing personal is sold, shared, or seen by anyone. The only thing tracked is two anonymous numbers — total visits and total completions — which are aggregate counts visible to everyone with no user information attached. This is deliberate and cannot be changed without fundamentally breaking the tool's privacy-first design.
             </div>
           </details>
 
@@ -14580,6 +14584,9 @@ function renderCompletionSummary(shell) {
       assessmentMode: State.session.assessmentMode,
       results: State.session.results
     });
+    // v4.1.9: Increment global anonymous completion counter (fire-and-forget).
+    // Failure to increment has zero impact on results rendering or app state.
+    maybeIncrementCompletionCounter().then(() => renderCounters()).catch(() => {});
   }
 
   const previewNote = isPreview
@@ -14608,6 +14615,7 @@ function renderCompletionSummary(shell) {
     <div class="completion-card">
       <div class="completion-emoji">🎉</div>
       <h2 class="completion-title">Assessment Complete!</h2>
+      <p id="resultsCounter" style="display:none;text-align:center;font-size:0.95rem;color:var(--c-text-muted, #6b7280);margin-top:0.5rem;margin-bottom:1rem;" aria-live="polite"></p>
       ${previewNote}
       <div style="margin: var(--sp-5) 0; text-align: left; max-width: 560px; margin-left: auto; margin-right: auto;">
         <h4 style="text-align: center; margin-bottom: var(--sp-4);">Your Top 5 Dimensions (Preview)</h4>
@@ -14951,6 +14959,247 @@ async function sendResultsToParent() {
    ============================================================ */
 
 const FEEDBACK_EMAIL = "rajantonapeai+mycareerlens@gmail.com";
+
+/* ============================================================
+   v4.1.9 — ANONYMOUS COUNTERS (Visits + Completions)
+   ------------------------------------------------------------
+   PRIVACY POSTURE: This module records ONLY two global counts —
+   "how many visits" and "how many completions" — with zero
+   user-identifying data. No name, no IP correlation, no session
+   ID, no timestamps tied to any individual. The counter service
+   (Abacus by Jason Cameron, https://abacus.jasoncameron.dev)
+   stores only anonymous integers visible to everyone.
+
+   CONFIGURABILITY: Three independent toggles below let Rajan
+   enable/disable display OR fully stop counting at any time
+   without touching any other code.
+
+   FAILURE MODE: Every API call is wrapped in try/catch and times
+   out fast (3s). If the service is unreachable or returns an
+   error, the counter UI silently hides and the rest of the app
+   functions exactly as before. ZERO IMPACT on app functionality.
+
+   ANTI-INFLATION:
+   - Visit counter: localStorage timestamp prevents same browser
+     from incrementing more than once per 24-hour window.
+   - Completion counter: localStorage flag tied to session
+     completedAt prevents the same completed assessment from
+     ever re-incrementing.
+   ============================================================ */
+
+// MASTER KILL-SWITCH — flip to false to fully stop ALL API calls
+// (no increments, no reads, counters disappear from UI).
+const COUNTERS_ENABLED = true;
+
+// VISIBILITY TOGGLES — flip to false to hide individual counters
+// from UI without affecting backend counting. Counts continue to
+// accumulate silently; flip back to true later to reveal them.
+const SHOW_VISIT_COUNTER = true;
+const SHOW_COMPLETION_COUNTER = true;
+
+// Abacus counter service config
+const COUNTER_API_BASE = "https://abacus.jasoncameron.dev";
+const COUNTER_NAMESPACE = "mycareerlens-prod";
+const COUNTER_KEY_VISITS = "visits";
+const COUNTER_KEY_COMPLETIONS = "completions";
+
+// localStorage keys for anti-double-count flags
+const COUNTER_LS_VISIT_TS = "careerlens_v4_lastvisit";  // timestamp of last visit increment (24h cooldown)
+const COUNTER_LS_COMPLETION_DONE = "careerlens_v4_completion_counted";  // flag once a completion has been counted
+const COUNTER_VISIT_COOLDOWN_MS = 24 * 60 * 60 * 1000;  // 24 hours
+
+// In-memory cache to avoid redundant API calls within a single page session
+let _counterCache = { visits: null, completions: null };
+
+/**
+ * Fetch a counter's current value WITHOUT incrementing it.
+ * Used for displays that should NOT increment on render (e.g. results page
+ * showing the completion count after that user's own completion already counted).
+ * @param {string} key - "visits" or "completions"
+ * @returns {Promise<number|null>} - resolved count or null on error
+ */
+async function fetchCounterValue(key) {
+  if (!COUNTERS_ENABLED) return null;
+  try {
+    const url = `${COUNTER_API_BASE}/get/${COUNTER_NAMESPACE}/${key}`;
+    const ctrl = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 3000);
+    const resp = await fetch(url, { signal: ctrl.signal, cache: "no-cache" });
+    clearTimeout(timeout);
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    if (typeof data.value === "number") {
+      _counterCache[key] = data.value;
+      return data.value;
+    }
+    return null;
+  } catch (e) {
+    // Silent fail — service may be down, network may be offline, etc.
+    // App must continue working normally.
+    return null;
+  }
+}
+
+/**
+ * Increment a counter and return the new value.
+ * @param {string} key - "visits" or "completions"
+ * @returns {Promise<number|null>} - new count or null on error
+ */
+async function incrementCounter(key) {
+  if (!COUNTERS_ENABLED) return null;
+  try {
+    const url = `${COUNTER_API_BASE}/hit/${COUNTER_NAMESPACE}/${key}`;
+    const ctrl = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 3000);
+    const resp = await fetch(url, { signal: ctrl.signal, cache: "no-cache" });
+    clearTimeout(timeout);
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    if (typeof data.value === "number") {
+      _counterCache[key] = data.value;
+      return data.value;
+    }
+    return null;
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Visit increment — fires at most once per 24h per browser.
+ * Called from init() at app startup.
+ */
+async function maybeIncrementVisitCounter() {
+  if (!COUNTERS_ENABLED) return null;
+  try {
+    const lastTs = parseInt(storageGet(COUNTER_LS_VISIT_TS) || "0", 10);
+    const now = Date.now();
+    if (lastTs && (now - lastTs) < COUNTER_VISIT_COOLDOWN_MS) {
+      // Within cooldown — just read the current value, don't increment
+      return await fetchCounterValue(COUNTER_KEY_VISITS);
+    }
+    const newValue = await incrementCounter(COUNTER_KEY_VISITS);
+    if (newValue !== null) {
+      try { localStorage.setItem(COUNTER_LS_VISIT_TS, String(now)); } catch (e) {}
+    }
+    return newValue;
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Completion increment — fires at most once per completed session.
+ * Called from the assessment-completion flow (line ~14572).
+ * The session.completedAt timestamp is used as a unique fingerprint.
+ */
+async function maybeIncrementCompletionCounter() {
+  if (!COUNTERS_ENABLED) return null;
+  try {
+    const completedAt = State.session && State.session.completedAt;
+    if (!completedAt) return null;
+    const flagKey = COUNTER_LS_COMPLETION_DONE + "_" + completedAt;
+    if (storageGet(flagKey)) {
+      // Already counted this completion (e.g. user re-rendered results page)
+      return await fetchCounterValue(COUNTER_KEY_COMPLETIONS);
+    }
+    const newValue = await incrementCounter(COUNTER_KEY_COMPLETIONS);
+    if (newValue !== null) {
+      try { localStorage.setItem(flagKey, "1"); } catch (e) {}
+    }
+    return newValue;
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Format a number with thousands separator (Indian-friendly: en-IN locale).
+ * @param {number} n
+ * @returns {string}
+ */
+function formatCounterValue(n) {
+  try {
+    return Number(n).toLocaleString("en-IN");
+  } catch (e) {
+    return String(n);
+  }
+}
+
+/**
+ * Render counter values into UI elements (if visibility flags are on).
+ * Called after init increment + after results render.
+ * Defensive: hides elements gracefully if values are null OR flags are off.
+ */
+function renderCounters() {
+  if (!COUNTERS_ENABLED) {
+    hideCounterElements();
+    return;
+  }
+  // Landing page counters
+  const landingEl = document.getElementById("landingCounters");
+  if (landingEl) {
+    if (!SHOW_VISIT_COUNTER && !SHOW_COMPLETION_COUNTER) {
+      landingEl.style.display = "none";
+    } else {
+      const parts = [];
+      if (SHOW_VISIT_COUNTER && _counterCache.visits !== null) {
+        parts.push(`<strong>${formatCounterValue(_counterCache.visits)}</strong> visits`);
+      }
+      if (SHOW_COMPLETION_COUNTER && _counterCache.completions !== null) {
+        parts.push(`<strong>${formatCounterValue(_counterCache.completions)}</strong> assessments completed`);
+      }
+      if (parts.length) {
+        landingEl.innerHTML = parts.join(" · ");
+        landingEl.style.display = "";
+      } else {
+        landingEl.style.display = "none";
+      }
+    }
+  }
+  // Results page completion counter
+  const resultsEl = document.getElementById("resultsCounter");
+  if (resultsEl) {
+    if (!SHOW_COMPLETION_COUNTER || _counterCache.completions === null) {
+      resultsEl.style.display = "none";
+    } else {
+      resultsEl.innerHTML = `🎉 You're one of <strong>${formatCounterValue(_counterCache.completions)}</strong> students who have completed their MyCareerLens assessment.`;
+      resultsEl.style.display = "";
+    }
+  }
+}
+
+/**
+ * Hide all counter UI elements (used by master kill-switch).
+ */
+function hideCounterElements() {
+  const ids = ["landingCounters", "resultsCounter"];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = "none";
+  });
+}
+
+/**
+ * Public entry: initialize visit counter + render. Called from init().
+ * Async so it never blocks the rest of init.
+ */
+async function initCounters() {
+  if (!COUNTERS_ENABLED) {
+    hideCounterElements();
+    return;
+  }
+  // Fire visit increment async — don't await before continuing
+  maybeIncrementVisitCounter().then(() => {
+    // Also fetch completions for landing display
+    return fetchCounterValue(COUNTER_KEY_COMPLETIONS);
+  }).then(() => {
+    renderCounters();
+  }).catch(() => {
+    // Safety net — render with whatever we have (may show nothing, that's fine)
+    renderCounters();
+  });
+}
 
 /**
  * Build the pre-filled feedback email (subject + body). User can edit anything before sending.
@@ -16676,6 +16925,12 @@ function init() {
   initResultsTabs();
   initResultsActions();
   initCreditsBadge();
+
+  // v4.1.9: Initialize anonymous counters (visits + completions).
+  // Fires AFTER all other init so even if counter init failed (network down,
+  // service offline, etc.), the entire rest of the app is fully functional.
+  // Counter init is fully async and silently no-ops on any error.
+  initCounters();
 
   // Wizard navigation
   document.getElementById("pwBack").onclick = prevStep;
