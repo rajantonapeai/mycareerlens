@@ -3209,7 +3209,7 @@ code, kbd, pre, samp, .font-data { font-family: var(--font-data); }
    ============================================================ */
 
 /** @const {string} Application version (phase-aware) */
-const APP_VERSION = "4.1.9-final";
+const APP_VERSION = "4.1.10-final";
 
 /** @const {number} Session schema version. Increment when session shape changes incompatibly. */
 const SESSION_VERSION = 1;
@@ -15026,6 +15026,13 @@ async function fetchCounterValue(key) {
     const timeout = setTimeout(() => ctrl.abort(), 3000);
     const resp = await fetch(url, { signal: ctrl.signal, cache: "no-cache" });
     clearTimeout(timeout);
+    // 404 = "Key not found" on Abacus = counter has never been incremented = logically 0.
+    // Treat as zero rather than error so the UI can honestly show "0 finished" before
+    // the first completion ever happens.
+    if (resp.status === 404) {
+      _counterCache[key] = 0;
+      return 0;
+    }
     if (!resp.ok) return null;
     const data = await resp.json();
     if (typeof data.value === "number") {
@@ -15144,10 +15151,10 @@ function renderCounters() {
     } else {
       const parts = [];
       if (SHOW_VISIT_COUNTER && _counterCache.visits !== null) {
-        parts.push(`<strong>${formatCounterValue(_counterCache.visits)}</strong> visits`);
+        parts.push(`<strong>${formatCounterValue(_counterCache.visits)}</strong> students explored`);
       }
       if (SHOW_COMPLETION_COUNTER && _counterCache.completions !== null) {
-        parts.push(`<strong>${formatCounterValue(_counterCache.completions)}</strong> assessments completed`);
+        parts.push(`<strong>${formatCounterValue(_counterCache.completions)}</strong> finished`);
       }
       if (parts.length) {
         landingEl.innerHTML = parts.join(" · ");
@@ -15163,7 +15170,7 @@ function renderCounters() {
     if (!SHOW_COMPLETION_COUNTER || _counterCache.completions === null) {
       resultsEl.style.display = "none";
     } else {
-      resultsEl.innerHTML = `🎉 You're one of <strong>${formatCounterValue(_counterCache.completions)}</strong> students who have completed their MyCareerLens assessment.`;
+      resultsEl.innerHTML = `🎉 You're one of <strong>${formatCounterValue(_counterCache.completions)}</strong> students who have finished their MyCareerLens assessment.`;
       resultsEl.style.display = "";
     }
   }
