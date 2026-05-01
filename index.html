@@ -9,7 +9,7 @@
      ============================================================ -->
 <title>MyCareerLens — Free Career Test for Indian Students</title>
 <meta name="title" content="MyCareerLens — Free Career Test for Indian Students">
-<meta name="description" content="100% free career test for Indian students aged 6-21. No signup, no tracking. 5 psychometric frameworks. A gift to young minds by Rajan Tonape.">
+<meta name="description" content="Free online career test & aptitude quiz for Indian students aged 6-21. No signup, no tracking. 5 psychometric frameworks. A gift to young minds by Rajan Tonape.">
 <meta name="author" content="Mr. Rajan Tonape">
 <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
 <meta name="googlebot" content="index, follow">
@@ -1110,13 +1110,16 @@ code, kbd, pre, samp, .font-data { font-family: var(--font-data); }
   transform-origin: top right;
   transform: scale(0.9);
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
-  transition: transform var(--dur-base) var(--ease), opacity var(--dur-base) var(--ease);
+  transition: transform var(--dur-base) var(--ease), opacity var(--dur-base) var(--ease), visibility 0s linear var(--dur-base);
 }
 .a11y-panel.open {
   transform: scale(1);
   opacity: 1;
+  visibility: visible;
   pointer-events: auto;
+  transition: transform var(--dur-base) var(--ease), opacity var(--dur-base) var(--ease), visibility 0s linear 0s;
 }
 .a11y-row {
   display: flex;
