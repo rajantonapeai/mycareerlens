@@ -297,6 +297,7 @@
 <!-- CDN fonts with fallback via font-family chains -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Nunito:wght@400;600&family=Space+Mono:wght@400;700&display=swap">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Nunito:wght@400;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 
 <!-- Chart.js was loaded in earlier design but is not used in current implementation. -->
@@ -850,12 +851,14 @@ code, kbd, pre, samp, .font-data { font-family: var(--font-data); }
   background: radial-gradient(circle, var(--accent-gold), transparent 70%);
   top: 10%; left: -5%;
   animation: heroFloat 12s ease-in-out infinite;
+  will-change: transform;
 }
 .hero-deco-2 {
   width: 180px; height: 180px;
   background: radial-gradient(circle, var(--primary-light), transparent 70%);
   top: 20%; right: -3%;
   animation: heroFloat 14s ease-in-out infinite reverse;
+  will-change: transform;
 }
 @keyframes heroFloat {
   0%, 100% { transform: translate(0, 0) scale(1); }
